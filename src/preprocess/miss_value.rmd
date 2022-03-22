@@ -1,0 +1,142 @@
+---
+title: "ERG2050_HW2"
+author: 119020286 Liao Ziqi
+geometry: tmargin=2.3cm,bmargin=2.3cm,lmargin=2cm,rmargin=2cm
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+\newpage
+\tableofcontents
+\newpage
+
+
+# Handle Miss Value
+
+##
+
+```{r}
+train = read.csv('../bankruptcy data/train.csv')
+test = read.csv('../bankruptcy data/test.csv')
+train_X = train[-65]
+test_X = test[-65]
+train_Y = train[65]
+test_Y = test[65]
+```
+
+
+```{r}
+head(train)
+```
+```{r}
+head(test)
+```
+
+
+```{r}
+summary(train)
+```
+
+```{r}
+library(mice)
+
+library(dplyr)
+train.miss = train %>% 
+  select_if(~any(is.na(.)))
+test.miss = test %>% 
+  select_if(~any(is.na(.)))
+```
+
+```{r}
+md.pattern(train.miss,rotate.names = T)
+```
+
+
+```{r}
+library(VIM)
+mice_plot <- aggr(train.miss, col=c('navyblue','yellow'),
+                   numbers=TRUE, sortVars=TRUE,
+                   labels=names(train.miss), cex.axis=.7,
+                   gap=3, ylab=c("Missing data","Pattern"))
+```
+
+
+```{r,echo=FALSE}
+imputed_train <- mice(train_X, m=5, maxit = 5, seed = 500)
+```
+
+```{r}
+stripplot(imputed_train, Attr37 + Attr27 + Attr45 ~  .imp,col=c("grey",mdc(2)),pch=c(1,20))
+```
+
+```{r}
+xyplot(imputed_train , Attr45 ~  Attr37| .imp, pch=20,cex=1.2)
+```
+
+
+```{r}
+densityplot(imputed_train,data = ~Attr37 + Attr27 + Attr45)
+```
+
+```{r}
+completed.Train <- complete(imputed_train,2)
+```
+
+
+```{r}
+library(caret)
+library(RANN)
+miss = preProcess(completed.Train,method='bagImpute',k=5)
+imputed.train = predict(miss,completed.Train)
+imputed.train["class"] = train_Y
+```
+
+```{r}
+total = rbind(imputed.train,test)
+total_X = total[-65]
+total_Y = total[65]
+```
+
+
+```{r}
+imputed_total <- mice(total_X, m=5, maxit = 5, seed = 500)
+```
+```{r}
+completed.Total <- complete(imputed_total,2)
+```
+
+
+```{r}
+library(caret)
+library(RANN)
+miss = preProcess(completed.Total,method='bagImpute',k=5)
+imputed.total = predict(miss,completed.Total)
+imputed.total["class"] = total_Y
+```
+
+```{r}
+imputed.test = imputed.total[950:1100,]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
